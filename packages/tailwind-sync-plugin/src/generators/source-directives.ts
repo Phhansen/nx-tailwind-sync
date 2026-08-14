@@ -158,7 +158,9 @@ function updateSourceDirectives(
   tree: Tree,
   projectName: string,
   cssFilePath: string,
-  projectGraph: ProjectGraph
+  projectGraph: ProjectGraph,
+  excludedTags: string[] = [],
+  excludedProjects: string[] = []
 ): boolean {
   const dependencies = collectDependencies(projectName, projectGraph);
 
@@ -168,7 +170,15 @@ function updateSourceDirectives(
 
   dependencies.forEach((dep) => {
     const project = projectGraph.nodes[dep];
-    if (project && project.data.root) {
+    const isExcluded = project?.data.tags?.some((tag) =>
+      excludedTags.includes(tag)
+    );
+    if (
+      project &&
+      project.data.root &&
+      !isExcluded &&
+      !excludedProjects.includes(dep)
+    ) {
       // Calculate relative path from CSS file directory to dependency root
       const relativePath = relative(cssDir, project.data.root).replace(
         /\\/g,
@@ -278,7 +288,9 @@ export async function updateTailwindGlobsGenerator(
         tree,
         project.name,
         cssFile,
-        projectGraph
+        projectGraph,
+        options.excludedTags,
+        options.excludedProjects
       );
       if (updated) {
         updatedProjects.push(project.name);

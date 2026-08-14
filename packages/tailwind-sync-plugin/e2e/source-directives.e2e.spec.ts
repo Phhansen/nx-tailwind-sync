@@ -121,6 +121,108 @@ describe('source-directives e2e', () => {
     expect(css).toContain(libB);
   });
 
+  it('should exclude dependencies with excluded tags', () => {
+    const app = uniq('app');
+    const uiLib = uniq('ui-lib');
+    const utilLib = uniq('util-lib');
+
+    updateFile(
+      `apps/${app}/project.json`,
+      JSON.stringify({
+        name: app,
+        root: `apps/${app}`,
+        sourceRoot: `apps/${app}/src`,
+        implicitDependencies: [uiLib, utilLib],
+      })
+    );
+    updateFile(`apps/${app}/src/styles.css`, `@import 'tailwindcss';`);
+    updateFile(`apps/${app}/src/main.ts`, `console.log('app');`);
+
+    updateFile(
+      `libs/${uiLib}/project.json`,
+      JSON.stringify({
+        name: uiLib,
+        root: `libs/${uiLib}`,
+        sourceRoot: `libs/${uiLib}/src`,
+        tags: ['type:ui'],
+      })
+    );
+    updateFile(`libs/${uiLib}/src/index.ts`, `export const ui = 1;`);
+
+    updateFile(
+      `libs/${utilLib}/project.json`,
+      JSON.stringify({
+        name: utilLib,
+        root: `libs/${utilLib}`,
+        sourceRoot: `libs/${utilLib}/src`,
+        tags: ['type:util'],
+      })
+    );
+    updateFile(`libs/${utilLib}/src/index.ts`, `export const util = 1;`);
+
+    runNxCommand(
+      `g @juristr/nx-tailwind-sync:source-directives --excludedTags=type:util`,
+      { silenceError: true }
+    );
+
+    const css = readFile(`apps/${app}/src/styles.css`);
+    expect(css).toContain(uiLib);
+    expect(css).not.toContain(utilLib);
+  });
+
+  it('should exclude dependencies by project name', () => {
+    const app = uniq('app');
+    const includedLib = uniq('included-lib');
+    const excludedLib = uniq('excluded-lib');
+
+    updateFile(
+      `apps/${app}/project.json`,
+      JSON.stringify({
+        name: app,
+        root: `apps/${app}`,
+        sourceRoot: `apps/${app}/src`,
+        implicitDependencies: [includedLib, excludedLib],
+      })
+    );
+    updateFile(`apps/${app}/src/styles.css`, `@import 'tailwindcss';`);
+    updateFile(`apps/${app}/src/main.ts`, `console.log('app');`);
+
+    updateFile(
+      `libs/${includedLib}/project.json`,
+      JSON.stringify({
+        name: includedLib,
+        root: `libs/${includedLib}`,
+        sourceRoot: `libs/${includedLib}/src`,
+      })
+    );
+    updateFile(
+      `libs/${includedLib}/src/index.ts`,
+      `export const included = 1;`
+    );
+
+    updateFile(
+      `libs/${excludedLib}/project.json`,
+      JSON.stringify({
+        name: excludedLib,
+        root: `libs/${excludedLib}`,
+        sourceRoot: `libs/${excludedLib}/src`,
+      })
+    );
+    updateFile(
+      `libs/${excludedLib}/src/index.ts`,
+      `export const excluded = 1;`
+    );
+
+    runNxCommand(
+      `g @juristr/nx-tailwind-sync:source-directives --excludedProjects=${excludedLib}`,
+      { silenceError: true }
+    );
+
+    const css = readFile(`apps/${app}/src/styles.css`);
+    expect(css).toContain(includedLib);
+    expect(css).not.toContain(excludedLib);
+  });
+
   it('should not add block when no dependencies', () => {
     const app = uniq('app');
 

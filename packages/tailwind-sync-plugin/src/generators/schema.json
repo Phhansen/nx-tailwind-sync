@@ -7,6 +7,16 @@
       "type": "array",
       "items": { "type": "string" },
       "description": "Additional relative paths (from project root) to search for styles.css files with @import 'tailwindcss'"
+    },
+    "excludedTags": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Project tags to exclude from generated @source directives"
+    },
+    "excludedProjects": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Project names to exclude from generated @source directives"
     }
   },
   "required": []

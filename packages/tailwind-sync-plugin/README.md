@@ -63,9 +63,11 @@ pnpm nx sync
 
 ## Options
 
-| Option                 | Type       | Description                                   |
-| ---------------------- | ---------- | --------------------------------------------- |
-| `additionalStylePaths` | `string[]` | Extra relative paths to search for styles.css |
+| Option                 | Type       | Description                                        |
+| ---------------------- | ---------- | -------------------------------------------------- |
+| `additionalStylePaths` | `string[]` | Extra relative paths to search for styles.css      |
+| `excludedTags`         | `string[]` | Project tags to exclude from `@source` directives  |
+| `excludedProjects`     | `string[]` | Project names to exclude from `@source` directives |
 
 ## Building
 
