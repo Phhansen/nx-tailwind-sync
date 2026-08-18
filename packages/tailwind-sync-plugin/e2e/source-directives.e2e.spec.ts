@@ -161,7 +161,7 @@ describe('source-directives e2e', () => {
     updateFile(`libs/${utilLib}/src/index.ts`, `export const util = 1;`);
 
     runNxCommand(
-      `g @juristr/nx-tailwind-sync:source-directives --excludedTags=type:util`,
+      `g @juristr/nx-tailwind-sync:source-directives --exclude=tag:type:util`,
       { silenceError: true }
     );
 
@@ -214,13 +214,77 @@ describe('source-directives e2e', () => {
     );
 
     runNxCommand(
-      `g @juristr/nx-tailwind-sync:source-directives --excludedProjects=${excludedLib}`,
+      `g @juristr/nx-tailwind-sync:source-directives --exclude=name:${excludedLib}`,
       { silenceError: true }
     );
 
     const css = readFile(`apps/${app}/src/styles.css`);
     expect(css).toContain(includedLib);
     expect(css).not.toContain(excludedLib);
+  });
+
+  it('should read exclude from sync.generatorOptions when run via nx sync', () => {
+    const app = uniq('app');
+    const keptLib = uniq('kept');
+    const legacyLib = uniq('legacy');
+
+    updateFile(
+      `apps/${app}/project.json`,
+      JSON.stringify({
+        name: app,
+        root: `apps/${app}`,
+        sourceRoot: `apps/${app}/src`,
+        implicitDependencies: [keptLib, legacyLib],
+      })
+    );
+    updateFile(`apps/${app}/src/styles.css`, `@import 'tailwindcss';`);
+    updateFile(`apps/${app}/src/main.ts`, `console.log('app');`);
+
+    updateFile(
+      `libs/${keptLib}/project.json`,
+      JSON.stringify({
+        name: keptLib,
+        root: `libs/${keptLib}`,
+        sourceRoot: `libs/${keptLib}/src`,
+      })
+    );
+    updateFile(`libs/${keptLib}/src/index.ts`, `export const kept = 1;`);
+
+    updateFile(
+      `libs/${legacyLib}/project.json`,
+      JSON.stringify({
+        name: legacyLib,
+        root: `libs/${legacyLib}`,
+        sourceRoot: `libs/${legacyLib}/src`,
+      })
+    );
+    updateFile(`libs/${legacyLib}/src/index.ts`, `export const legacy = 1;`);
+
+    // Configure the sync generator via nx.json — the only way options reach
+    // the generator during `nx sync` (Nx passes sync generators no options).
+    const originalNxJson = readFile('nx.json');
+    const nxJson = JSON.parse(originalNxJson);
+    nxJson.sync = {
+      globalGenerators: ['@juristr/nx-tailwind-sync:source-directives'],
+      generatorOptions: {
+        '@juristr/nx-tailwind-sync:source-directives': {
+          // glob pattern — exercises findMatchingProjects syntax
+          exclude: ['legacy*'],
+        },
+      },
+    };
+    updateFile('nx.json', JSON.stringify(nxJson, null, 2));
+
+    try {
+      // NX_DAEMON=false: the nx.json edit above can race a daemon restart
+      runCommand('NX_DAEMON=false npx nx sync', {});
+
+      const css = readFile(`apps/${app}/src/styles.css`);
+      expect(css).toContain(keptLib);
+      expect(css).not.toContain(legacyLib);
+    } finally {
+      updateFile('nx.json', originalNxJson);
+    }
   });
 
   it('should not add block when no dependencies', () => {
